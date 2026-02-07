@@ -1,20 +1,42 @@
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Star, TrendingUp, TrendingDown, X } from 'lucide-react'
-import { getStockQuote } from '../services/stockData'
+import * as api from '../services/api'
 import { useApp } from '../context/AppContext'
 import { formatCurrency, formatPercent, formatLargeNumber } from '../utils/formatters'
 import StockChart from '../components/StockChart'
+import Loader from '../components/Loader'
 
 export default function Watchlist() {
   const { watchlist, removeFromWatchlist } = useApp()
+  const [stocks, setStocks] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const stocks = useMemo(() => {
-    return watchlist.map(symbol => ({
-      symbol,
-      ...getStockQuote(symbol),
-    }))
+  useEffect(() => {
+    async function fetchQuotes() {
+      if (watchlist.length === 0) {
+        setStocks([])
+        setLoading(false)
+        return
+      }
+      try {
+        setLoading(true)
+        const quotes = await Promise.all(
+          watchlist.map(symbol =>
+            api.getStockQuote(symbol).then(quote => ({ symbol, ...quote }))
+          )
+        )
+        setStocks(quotes)
+      } catch (err) {
+        console.error('Failed to load watchlist quotes:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchQuotes()
   }, [watchlist])
+
+  if (loading) return <Loader text="Loading watchlist..." />
 
   return (
     <div className="space-y-6 animate-fade-in">

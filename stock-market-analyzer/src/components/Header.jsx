@@ -1,26 +1,42 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Bell, TrendingUp, TrendingDown } from 'lucide-react'
-import { searchStocks, getMarketIndices } from '../services/stockData'
+import * as api from '../services/api'
 import { formatPercent } from '../utils/formatters'
 
 export default function Header() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [showResults, setShowResults] = useState(false)
+  const [indices, setIndices] = useState([])
   const inputRef = useRef(null)
   const resultsRef = useRef(null)
   const navigate = useNavigate()
-  const indices = getMarketIndices()
 
+  // Load market indices
   useEffect(() => {
-    if (query.length >= 1) {
-      setResults(searchStocks(query))
-      setShowResults(true)
-    } else {
+    api.getMarketIndices().then(setIndices).catch(() => {})
+    const interval = setInterval(() => {
+      api.getMarketIndices().then(setIndices).catch(() => {})
+    }, 60_000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Search with debounce
+  useEffect(() => {
+    if (query.length < 1) {
       setResults([])
       setShowResults(false)
+      return
     }
+    const timer = setTimeout(async () => {
+      try {
+        const data = await api.searchStocks(query)
+        setResults(data)
+        setShowResults(true)
+      } catch { setResults([]) }
+    }, 300)
+    return () => clearTimeout(timer)
   }, [query])
 
   useEffect(() => {
@@ -47,7 +63,7 @@ export default function Header() {
           {indices.slice(0, 4).map(idx => (
             <div key={idx.symbol} className="flex items-center gap-2 text-xs">
               <span className="text-dark-400 font-medium">{idx.name}</span>
-              <span className="text-dark-100 font-semibold">{idx.value.toLocaleString()}</span>
+              <span className="text-dark-100 font-semibold">{idx.value?.toLocaleString()}</span>
               <span className={`flex items-center gap-0.5 font-medium ${idx.changePercent >= 0 ? 'text-success' : 'text-danger'}`}>
                 {idx.changePercent >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                 {formatPercent(idx.changePercent)}
@@ -79,7 +95,7 @@ export default function Header() {
                     <span className="text-sm font-semibold text-dark-100">{stock.symbol}</span>
                     <span className="text-xs text-dark-400 ml-2">{stock.name}</span>
                   </div>
-                  <span className="text-xs text-dark-500">{stock.sector}</span>
+                  <span className="text-xs text-dark-500">{stock.type || stock.exchange}</span>
                 </button>
               ))}
             </div>

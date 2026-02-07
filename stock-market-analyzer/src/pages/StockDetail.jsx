@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   TrendingUp,
@@ -13,19 +13,39 @@ import {
   Target,
   BarChart3,
 } from 'lucide-react'
-import { getStockQuote, generateHistoricalData } from '../services/stockData'
+import * as api from '../services/api'
 import { useApp } from '../context/AppContext'
 import { formatCurrency, formatPercent, formatLargeNumber, formatNumber } from '../utils/formatters'
 import StockChart from '../components/StockChart'
+import Loader from '../components/Loader'
 
 export default function StockDetail() {
   const { symbol } = useParams()
   const { watchlist, addToWatchlist, removeFromWatchlist, addToPortfolio } = useApp()
-  const quote = useMemo(() => getStockQuote(symbol), [symbol])
+  const [quote, setQuote] = useState(null)
+  const [loading, setLoading] = useState(true)
   const isWatched = watchlist.includes(symbol)
   const [showAddPortfolio, setShowAddPortfolio] = useState(false)
   const [shares, setShares] = useState('')
   const [price, setPrice] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    Promise.all([api.getStockQuote(symbol), api.getStockInfo(symbol)])
+      .then(([quoteData, infoData]) => {
+        if (!cancelled) {
+          setQuote({ ...quoteData, ...infoData })
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [symbol])
+
+  if (loading || !quote) return <Loader />
 
   function handleAddPortfolio(e) {
     e.preventDefault()

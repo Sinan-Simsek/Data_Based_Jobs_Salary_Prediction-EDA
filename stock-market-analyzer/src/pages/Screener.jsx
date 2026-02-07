@@ -1,11 +1,19 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { BarChart3, TrendingUp, TrendingDown, SlidersHorizontal } from 'lucide-react'
-import { getAllStocks } from '../services/stockData'
+import * as api from '../services/api'
 import { formatCurrency, formatPercent, formatLargeNumber } from '../utils/formatters'
+import Loader from '../components/Loader'
+
+const SCREENER_SYMBOLS = [
+  'AAPL','MSFT','GOOGL','AMZN','TSLA','NVDA','META','JPM','V','JNJ',
+  'WMT','UNH','XOM','PG','DIS','NFLX','AMD','BA','CRM','INTC',
+  'PYPL','UBER','COIN','SQ','SNAP','PLTR','SOFI','NIO'
+]
 
 export default function Screener() {
-  const allStocks = useMemo(() => getAllStocks(), [])
+  const [allStocks, setAllStocks] = useState([])
+  const [loading, setLoading] = useState(true)
   const [sortBy, setSortBy] = useState('marketCap')
   const [sortDir, setSortDir] = useState('desc')
   const [filters, setFilters] = useState({
@@ -17,8 +25,17 @@ export default function Screener() {
     maxPE: '',
   })
 
+  useEffect(() => {
+    Promise.all(SCREENER_SYMBOLS.map(s => api.getStockQuote(s).catch(() => null)))
+      .then(results => {
+        setAllStocks(results.filter(Boolean))
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
   const sectors = useMemo(() => {
-    const s = new Set(allStocks.map(stock => stock.sector))
+    const s = new Set(allStocks.map(stock => stock.sector).filter(Boolean))
     return ['All', ...Array.from(s).sort()]
   }, [allStocks])
 
@@ -29,8 +46,8 @@ export default function Screener() {
     if (filters.maxPrice) stocks = stocks.filter(s => s.price <= parseFloat(filters.maxPrice))
     if (filters.minMarketCap) stocks = stocks.filter(s => s.marketCap >= parseFloat(filters.minMarketCap) * 1e9)
     if (filters.sector !== 'All') stocks = stocks.filter(s => s.sector === filters.sector)
-    if (filters.minPE) stocks = stocks.filter(s => s.pe >= parseFloat(filters.minPE))
-    if (filters.maxPE) stocks = stocks.filter(s => s.pe <= parseFloat(filters.maxPE))
+    if (filters.minPE) stocks = stocks.filter(s => s.pe && s.pe >= parseFloat(filters.minPE))
+    if (filters.maxPE) stocks = stocks.filter(s => s.pe && s.pe <= parseFloat(filters.maxPE))
 
     stocks.sort((a, b) => {
       const aVal = a[sortBy] || 0
@@ -54,6 +71,8 @@ export default function Screener() {
     if (sortBy !== column) return null
     return sortDir === 'desc' ? <TrendingDown className="w-3 h-3 inline ml-1" /> : <TrendingUp className="w-3 h-3 inline ml-1" />
   }
+
+  if (loading) return <Loader text="Loading screener data..." />
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -176,25 +195,25 @@ export default function Screener() {
                   </td>
                   <td className="px-5 py-4 text-sm text-dark-200">{stock.name}</td>
                   <td className="px-5 py-4">
-                    <span className="text-xs text-dark-400 bg-dark-800/50 px-2 py-1 rounded">{stock.sector}</span>
+                    <span className="text-xs text-dark-400 bg-dark-800/50 px-2 py-1 rounded">{stock.sector || '—'}</span>
                   </td>
                   <td className="px-5 py-4 text-right text-sm font-semibold text-white">{formatCurrency(stock.price)}</td>
                   <td className="px-5 py-4 text-right">
-                    <span className={`text-sm font-medium ${stock.changePercent >= 0 ? 'text-success' : 'text-danger'}`}>
+                    <span className={`text-sm font-medium ${(stock.changePercent || 0) >= 0 ? 'text-success' : 'text-danger'}`}>
                       {formatPercent(stock.changePercent)}
                     </span>
                   </td>
                   <td className="px-5 py-4 text-right text-sm text-dark-300">{formatLargeNumber(stock.marketCap)}</td>
-                  <td className="px-5 py-4 text-right text-sm text-dark-300">{stock.pe}</td>
+                  <td className="px-5 py-4 text-right text-sm text-dark-300">{stock.pe ? stock.pe.toFixed(2) : '—'}</td>
                   <td className="px-5 py-4 text-right text-sm text-dark-300">{formatLargeNumber(stock.volume)}</td>
                   <td className="px-5 py-4 text-right">
                     <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                      stock.analystRating === 'Strong Buy' ? 'bg-success/10 text-success' :
-                      stock.analystRating === 'Buy' ? 'bg-success/10 text-success' :
-                      stock.analystRating === 'Hold' ? 'bg-warning/10 text-warning' :
-                      'bg-danger/10 text-danger'
+                      stock.analystRating === 'strong_buy' || stock.analystRating === 'Strong Buy' ? 'bg-success/10 text-success' :
+                      stock.analystRating === 'buy' || stock.analystRating === 'Buy' ? 'bg-success/10 text-success' :
+                      stock.analystRating === 'hold' || stock.analystRating === 'Hold' ? 'bg-warning/10 text-warning' :
+                      stock.analystRating ? 'bg-danger/10 text-danger' : 'text-dark-500'
                     }`}>
-                      {stock.analystRating}
+                      {stock.analystRating || '—'}
                     </span>
                   </td>
                 </tr>
