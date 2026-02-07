@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import db from './db.js'
 import stocksRouter from './routes/stocks.js'
 import marketRouter from './routes/market.js'
 import portfolioRouter from './routes/portfolio.js'
@@ -27,9 +28,23 @@ app.use('/api/market', marketRouter)
 app.use('/api/portfolio', portfolioRouter)
 app.use('/api/watchlist', watchlistRouter)
 
-// Health check
+// Health check + database stats
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+  const stocks = db.prepare('SELECT COUNT(*) as cnt FROM stocks').get().cnt
+  const quotes = db.prepare('SELECT COUNT(*) as cnt FROM stock_quotes').get().cnt
+  const prices = db.prepare('SELECT COUNT(*) as cnt FROM stock_prices').get().cnt
+  const oldestPrice = db.prepare('SELECT MIN(date) as d FROM stock_prices').get()?.d
+  const newestPrice = db.prepare('SELECT MAX(date) as d FROM stock_prices').get()?.d
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    database: {
+      stocks,
+      quotes,
+      priceRecords: prices,
+      dateRange: oldestPrice && newestPrice ? `${oldestPrice} ~ ${newestPrice}` : 'No data synced yet',
+    }
+  })
 })
 
 app.listen(PORT, () => {
