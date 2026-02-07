@@ -179,11 +179,13 @@ export async function getMarketIndices() {
 }
 
 export async function getMarketMovers() {
-  // Use well-known large-cap symbols to determine movers
+  // Expanded universe of 50 high-volume stocks for better movers detection
   const symbols = [
-    'AAPL','MSFT','GOOGL','AMZN','TSLA','NVDA','META','JPM',
-    'V','JNJ','WMT','UNH','XOM','PG','DIS','NFLX','AMD','BA','CRM','INTC',
-    'PYPL','UBER','COIN','SQ','SNAP','RIVN','PLTR','SOFI','NIO','LCID'
+    'AAPL','MSFT','GOOGL','AMZN','TSLA','NVDA','META','AMD','INTC','NFLX',
+    'JPM','BAC','GS','V','MA','DIS','BA','CRM','PYPL','UBER',
+    'COIN','SQ','SNAP','RIVN','PLTR','SOFI','NIO','LCID','SHOP','ROKU',
+    'PFE','ABBV','LLY','UNH','WMT','COST','HD','XOM','CVX','PG',
+    'KO','MCD','SBUX','NKE','ABNB','DASH','CRWD','PANW','ARM','AVGO',
   ]
   try {
     const quotes = await getQuotes(symbols)
