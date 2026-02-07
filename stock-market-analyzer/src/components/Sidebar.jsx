@@ -23,7 +23,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar({ collapsed, onToggle }) {
   return (
-    <aside className={`fixed left-0 top-0 h-full bg-dark-900/95 backdrop-blur-xl border-r border-dark-700/50 z-50 transition-all duration-300 ${collapsed ? 'w-16' : 'w-60'}`}>
+    <aside className={`sticky top-0 h-screen flex-shrink-0 bg-dark-900/95 backdrop-blur-xl border-r border-dark-700/50 z-50 transition-all duration-300 ${collapsed ? 'w-16' : 'w-60'}`}>
       <div className="flex items-center gap-3 px-4 h-16 border-b border-dark-700/50">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center flex-shrink-0">
           <Activity className="w-5 h-5 text-white" />
