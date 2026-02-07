@@ -1,12 +1,12 @@
 import { Router } from 'express'
-import pool from '../db.js'
+import db from '../db.js'
 
 const router = Router()
 
 // Get all watchlist symbols
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT symbol FROM watchlist ORDER BY added_at')
+    const rows = db.prepare('SELECT symbol FROM watchlist ORDER BY added_at').all()
     res.json(rows.map(r => r.symbol))
   } catch (err) {
     console.error('Watchlist fetch error:', err)
@@ -20,10 +20,9 @@ router.post('/', async (req, res) => {
     const { symbol } = req.body
     if (!symbol) return res.status(400).json({ error: 'symbol is required' })
 
-    await pool.query(
-      'INSERT INTO watchlist (symbol) VALUES ($1) ON CONFLICT (symbol) DO NOTHING',
-      [symbol.toUpperCase()]
-    )
+    db.prepare(
+      'INSERT OR IGNORE INTO watchlist (symbol) VALUES (?)'
+    ).run(symbol.toUpperCase())
     res.json({ success: true, symbol: symbol.toUpperCase() })
   } catch (err) {
     console.error('Watchlist add error:', err)
@@ -35,7 +34,7 @@ router.post('/', async (req, res) => {
 router.delete('/:symbol', async (req, res) => {
   try {
     const symbol = req.params.symbol.toUpperCase()
-    await pool.query('DELETE FROM watchlist WHERE symbol = $1', [symbol])
+    db.prepare('DELETE FROM watchlist WHERE symbol = ?').run(symbol)
     res.json({ success: true })
   } catch (err) {
     console.error('Watchlist delete error:', err)
