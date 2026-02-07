@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   TrendingUp,
@@ -10,28 +10,116 @@ import {
   ArrowDownRight,
   Zap,
 } from 'lucide-react'
-import { getMarketIndices, getTopMovers, getStockQuote, getSectorPerformance, getMarketNews } from '../services/stockData'
+import * as api from '../services/api'
 import { useApp } from '../context/AppContext'
 import { formatCurrency, formatPercent, formatLargeNumber } from '../utils/formatters'
 import StockChart from '../components/StockChart'
+import Loader from '../components/Loader'
 
 export default function Dashboard() {
   const { watchlist, portfolio } = useApp()
-  const indices = getMarketIndices()
-  const movers = useMemo(() => getTopMovers(), [])
-  const sectors = useMemo(() => getSectorPerformance(), [])
-  const news = useMemo(() => getMarketNews().slice(0, 5), [])
 
-  const portfolioData = useMemo(() => {
-    return portfolio.map(p => {
-      const quote = getStockQuote(p.symbol)
-      const currentValue = p.shares * quote.price
-      const costBasis = p.shares * p.avgPrice
-      const gain = currentValue - costBasis
-      const gainPercent = (gain / costBasis) * 100
-      return { ...p, quote, currentValue, costBasis, gain, gainPercent }
-    })
+  const [indices, setIndices] = useState(null)
+  const [movers, setMovers] = useState(null)
+  const [sectors, setSectors] = useState(null)
+  const [news, setNews] = useState(null)
+  const [watchlistQuotes, setWatchlistQuotes] = useState({})
+  const [portfolioData, setPortfolioData] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  // Load market data
+  useEffect(() => {
+    let cancelled = false
+    async function loadMarketData() {
+      try {
+        const [indicesData, moversData, sectorsData, newsData] = await Promise.all([
+          api.getMarketIndices(),
+          api.getMarketMovers(),
+          api.getSectorPerformance(),
+          api.getMarketNews(),
+        ])
+        if (!cancelled) {
+          setIndices(indicesData)
+          setMovers(moversData)
+          setSectors(sectorsData)
+          setNews(newsData.slice(0, 5))
+        }
+      } catch (err) {
+        console.error('Failed to load market data:', err)
+      }
+    }
+    loadMarketData()
+    return () => { cancelled = true }
+  }, [])
+
+  // Load watchlist quotes
+  useEffect(() => {
+    let cancelled = false
+    async function loadWatchlistQuotes() {
+      if (watchlist.length === 0) {
+        setWatchlistQuotes({})
+        return
+      }
+      try {
+        const quotes = await Promise.all(
+          watchlist.slice(0, 6).map(symbol => api.getStockQuote(symbol))
+        )
+        if (!cancelled) {
+          const map = {}
+          watchlist.slice(0, 6).forEach((symbol, i) => {
+            map[symbol] = quotes[i]
+          })
+          setWatchlistQuotes(map)
+        }
+      } catch (err) {
+        console.error('Failed to load watchlist quotes:', err)
+      }
+    }
+    loadWatchlistQuotes()
+    return () => { cancelled = true }
+  }, [watchlist])
+
+  // Load portfolio quotes
+  useEffect(() => {
+    let cancelled = false
+    async function loadPortfolioData() {
+      if (portfolio.length === 0) {
+        setPortfolioData([])
+        return
+      }
+      try {
+        const quotes = await Promise.all(
+          portfolio.map(p => api.getStockQuote(p.symbol))
+        )
+        if (!cancelled) {
+          const data = portfolio.map((p, i) => {
+            const quote = quotes[i]
+            const currentValue = p.shares * quote.price
+            const costBasis = p.shares * p.avgPrice
+            const gain = currentValue - costBasis
+            const gainPercent = (gain / costBasis) * 100
+            return { ...p, quote, currentValue, costBasis, gain, gainPercent }
+          })
+          setPortfolioData(data)
+        }
+      } catch (err) {
+        console.error('Failed to load portfolio data:', err)
+      }
+    }
+    loadPortfolioData()
+    return () => { cancelled = true }
   }, [portfolio])
+
+  // Determine overall loading state
+  useEffect(() => {
+    if (indices && movers && sectors && news && portfolioData !== null) {
+      setLoading(false)
+    }
+  }, [indices, movers, sectors, news, portfolioData])
+
+  if (loading) {
+    return <Loader text="Loading dashboard..." />
+  }
 
   const totalValue = portfolioData.reduce((s, p) => s + p.currentValue, 0)
   const totalGain = portfolioData.reduce((s, p) => s + p.gain, 0)
@@ -96,7 +184,8 @@ export default function Dashboard() {
           </div>
           <div className="space-y-2">
             {watchlist.slice(0, 6).map(symbol => {
-              const quote = getStockQuote(symbol)
+              const quote = watchlistQuotes[symbol]
+              if (!quote) return null
               return (
                 <Link
                   key={symbol}

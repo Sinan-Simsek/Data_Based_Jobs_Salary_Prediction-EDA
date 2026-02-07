@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Briefcase,
@@ -10,10 +10,11 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from 'lucide-react'
-import { getStockQuote } from '../services/stockData'
+import * as api from '../services/api'
 import { useApp } from '../context/AppContext'
 import { formatCurrency, formatPercent, formatLargeNumber } from '../utils/formatters'
 import StockChart from '../components/StockChart'
+import Loader from '../components/Loader'
 import {
   PieChart as RePieChart,
   Pie,
@@ -26,17 +27,39 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'
 
 export default function Portfolio() {
   const { portfolio, removeFromPortfolio } = useApp()
+  const [holdings, setHoldings] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const holdings = useMemo(() => {
-    return portfolio.map(p => {
-      const quote = getStockQuote(p.symbol)
-      const currentValue = p.shares * quote.price
-      const costBasis = p.shares * p.avgPrice
-      const gain = currentValue - costBasis
-      const gainPercent = (gain / costBasis) * 100
-      return { ...p, quote, currentValue, costBasis, gain, gainPercent }
-    })
+  useEffect(() => {
+    async function fetchQuotes() {
+      if (portfolio.length === 0) {
+        setHoldings([])
+        setLoading(false)
+        return
+      }
+      try {
+        setLoading(true)
+        const results = await Promise.all(
+          portfolio.map(async (p) => {
+            const quote = await api.getStockQuote(p.symbol)
+            const currentValue = p.shares * quote.price
+            const costBasis = p.shares * p.avgPrice
+            const gain = currentValue - costBasis
+            const gainPercent = (gain / costBasis) * 100
+            return { ...p, quote, currentValue, costBasis, gain, gainPercent }
+          })
+        )
+        setHoldings(results)
+      } catch (err) {
+        console.error('Failed to load portfolio quotes:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchQuotes()
   }, [portfolio])
+
+  if (loading) return <Loader text="Loading portfolio..." />
 
   const totalValue = holdings.reduce((s, h) => s + h.currentValue, 0)
   const totalCost = holdings.reduce((s, h) => s + h.costBasis, 0)

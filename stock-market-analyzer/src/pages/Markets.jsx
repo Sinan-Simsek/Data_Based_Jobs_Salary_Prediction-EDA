@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   TrendingUp,
@@ -7,13 +7,37 @@ import {
   BarChart3,
   Zap,
 } from 'lucide-react'
-import { getMarketIndices, getTopMovers, getSectorPerformance } from '../services/stockData'
+import * as api from '../services/api'
 import { formatCurrency, formatPercent, formatLargeNumber } from '../utils/formatters'
+import Loader from '../components/Loader'
 
 export default function Markets() {
-  const indices = getMarketIndices()
-  const movers = useMemo(() => getTopMovers(), [])
-  const sectors = useMemo(() => getSectorPerformance(), [])
+  const [indices, setIndices] = useState([])
+  const [movers, setMovers] = useState({ gainers: [], losers: [], mostActive: [] })
+  const [sectors, setSectors] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [indicesData, moversData, sectorsData] = await Promise.all([
+          api.getMarketIndices(),
+          api.getMarketMovers(),
+          api.getSectorPerformance(),
+        ])
+        setIndices(indicesData)
+        setMovers(moversData)
+        setSectors(sectorsData)
+      } catch (err) {
+        console.error('Failed to load market data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  if (loading) return <Loader text="Loading market data..." />
 
   return (
     <div className="space-y-6 animate-fade-in">
