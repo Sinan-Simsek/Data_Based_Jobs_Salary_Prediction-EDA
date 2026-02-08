@@ -32,6 +32,7 @@ export const getStockHistory = (symbol, range = '1y') => fetchJSON(`/stocks/${sy
 export const getMarketIndices = () => fetchJSON('/market/indices')
 export const getMarketMovers = () => fetchJSON('/market/movers')
 export const getSectorPerformance = () => fetchJSON('/market/sectors')
+export const getSectorHistory = () => fetchJSON('/market/sectors/history')
 export const getMarketNews = (symbol) => fetchJSON(`/market/news${symbol ? `?symbol=${symbol}` : ''}`)
 
 // Watchlist
