@@ -14,6 +14,7 @@ import * as api from '../services/api'
 import { useApp } from '../context/AppContext'
 import { formatCurrency, formatPercent, formatLargeNumber } from '../utils/formatters'
 import StockChart from '../components/StockChart'
+import StockTreeMap from '../components/StockTreeMap'
 import Loader from '../components/Loader'
 
 export default function Dashboard() {
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const [movers, setMovers] = useState(null)
   const [sectors, setSectors] = useState(null)
   const [news, setNews] = useState(null)
+  const [treeMapData, setTreeMapData] = useState(null)
   const [watchlistQuotes, setWatchlistQuotes] = useState({})
   const [portfolioData, setPortfolioData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -32,17 +34,19 @@ export default function Dashboard() {
     let cancelled = false
     async function loadMarketData() {
       try {
-        const [indicesData, moversData, sectorsData, newsData] = await Promise.all([
+        const [indicesData, moversData, sectorsData, newsData, treeData] = await Promise.all([
           api.getMarketIndices(),
           api.getMarketMovers(),
           api.getSectorPerformance(),
           api.getMarketNews(),
+          api.getTreeMap().catch(() => []),
         ])
         if (!cancelled) {
           setIndices(indicesData)
           setMovers(moversData)
           setSectors(sectorsData)
           setNews(newsData.slice(0, 5))
+          setTreeMapData(treeData)
         }
       } catch (err) {
         console.error('Failed to load market data:', err)
@@ -174,6 +178,24 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+
+      {/* Stock Market Tree Map */}
+      {treeMapData && treeMapData.length > 0 && (
+        <div className="glass-card rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary-400" />
+              Stock Market Map
+            </h2>
+            <div className="flex items-center gap-4 text-[10px] text-dark-400">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-600 inline-block"></span> Losing</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-gray-600 inline-block"></span> Flat</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-600 inline-block"></span> Gaining</span>
+            </div>
+          </div>
+          <StockTreeMap data={treeMapData} height={550} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Watchlist */}
