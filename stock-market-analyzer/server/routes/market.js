@@ -140,6 +140,54 @@ router.get('/sectors/history', async (req, res) => {
   }
 })
 
+// Tree map data - stocks grouped by sector with market cap and change %
+router.get('/treemap', async (req, res) => {
+  try {
+    const cached = getCached('treemap', 120_000) // 2 min cache
+    if (cached) return res.json(cached)
+
+    // Get all stocks that have both sector info and quote data
+    const rows = db.prepare(`
+      SELECT s.symbol, s.name, s.sector,
+             q.price, q.change_percent, q.market_cap
+      FROM stocks s
+      JOIN stock_quotes q ON s.symbol = q.symbol
+      WHERE s.sector IS NOT NULL AND s.sector != ''
+        AND q.price IS NOT NULL AND q.market_cap IS NOT NULL
+      ORDER BY q.market_cap DESC
+    `).all()
+
+    // Group by sector
+    const sectorMap = {}
+    for (const row of rows) {
+      if (!sectorMap[row.sector]) {
+        sectorMap[row.sector] = { name: row.sector, stocks: [] }
+      }
+      sectorMap[row.sector].stocks.push({
+        symbol: row.symbol,
+        name: row.name,
+        price: row.price,
+        changePercent: row.change_percent,
+        marketCap: row.market_cap,
+      })
+    }
+
+    // Convert to array, sort sectors by total market cap
+    const data = Object.values(sectorMap)
+      .map(sector => ({
+        ...sector,
+        totalMarketCap: sector.stocks.reduce((sum, s) => sum + (s.marketCap || 0), 0),
+      }))
+      .sort((a, b) => b.totalMarketCap - a.totalMarketCap)
+
+    setCache('treemap', data)
+    res.json(data)
+  } catch (err) {
+    console.error('Treemap error:', err)
+    res.status(500).json({ error: 'Failed to fetch treemap data' })
+  }
+})
+
 // Market news
 router.get('/news', async (req, res) => {
   try {
