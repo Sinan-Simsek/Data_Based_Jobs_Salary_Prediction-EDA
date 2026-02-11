@@ -35,7 +35,7 @@ const SECTOR_ETFS = [
 // Market indices
 router.get('/indices', async (req, res) => {
   try {
-    const cached = getCached('indices', 60_000) // 1 min cache
+    const cached = getCached('indices', 10_000) // 10s cache
     if (cached) return res.json(cached)
 
     const data = await getMarketIndices()
@@ -50,7 +50,7 @@ router.get('/indices', async (req, res) => {
 // Top movers
 router.get('/movers', async (req, res) => {
   try {
-    const cached = getCached('movers', 120_000) // 2 min cache
+    const cached = getCached('movers', 15_000) // 15s cache
     if (cached) return res.json(cached)
 
     const data = await getMarketMovers()
@@ -65,7 +65,7 @@ router.get('/movers', async (req, res) => {
 // Sector performance (today only - from Yahoo Finance)
 router.get('/sectors', async (req, res) => {
   try {
-    const cached = getCached('sectors', 120_000) // 2 min cache
+    const cached = getCached('sectors', 15_000) // 15s cache
     if (cached) return res.json(cached)
 
     const data = await getSectorPerformance()
@@ -80,7 +80,7 @@ router.get('/sectors', async (req, res) => {
 // Multi-period sector performance (from DB historical data)
 router.get('/sectors/history', async (req, res) => {
   try {
-    const cached = getCached('sectors-history', 300_000) // 5 min cache
+    const cached = getCached('sectors-history', 60_000) // 1 min cache
     if (cached) return res.json(cached)
 
     const periods = {
@@ -143,7 +143,7 @@ router.get('/sectors/history', async (req, res) => {
 // Tree map data - stocks grouped by sector with market cap and change %
 router.get('/treemap', async (req, res) => {
   try {
-    const cached = getCached('treemap', 120_000) // 2 min cache
+    const cached = getCached('treemap', 15_000) // 15s cache
     if (cached) return res.json(cached)
 
     // Get all stocks that have both sector info and quote data

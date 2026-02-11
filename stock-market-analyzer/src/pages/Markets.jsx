@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
   TrendingUp,
@@ -51,27 +51,30 @@ export default function Markets() {
   const [selectedPeriod, setSelectedPeriod] = useState('1d')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const [indicesData, moversData, sectorsData, sectorHistData] = await Promise.all([
-          api.getMarketIndices(),
-          api.getMarketMovers(),
-          api.getSectorPerformance(),
-          api.getSectorHistory().catch(() => []),
-        ])
-        setIndices(indicesData)
-        setMovers(moversData)
-        setSectors(sectorsData)
-        setSectorHistory(sectorHistData)
-      } catch (err) {
-        console.error('Failed to load market data:', err)
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    try {
+      const [indicesData, moversData, sectorsData, sectorHistData] = await Promise.all([
+        api.getMarketIndices(),
+        api.getMarketMovers(),
+        api.getSectorPerformance(),
+        api.getSectorHistory().catch(() => []),
+      ])
+      setIndices(indicesData)
+      setMovers(moversData)
+      setSectors(sectorsData)
+      setSectorHistory(sectorHistData)
+    } catch (err) {
+      console.error('Failed to load market data:', err)
+    } finally {
+      setLoading(false)
     }
-    fetchData()
   }, [])
+
+  useEffect(() => {
+    fetchData()
+    const interval = setInterval(fetchData, 10_000)
+    return () => clearInterval(interval)
+  }, [fetchData])
 
   if (loading) return <Loader text="Loading market data..." />
 
