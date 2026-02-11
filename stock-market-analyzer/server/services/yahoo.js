@@ -146,6 +146,68 @@ export async function getStockProfile(symbol) {
   }
 }
 
+export async function getAnalystData(symbol) {
+  try {
+    const result = await yahooFinance.quoteSummary(symbol, {
+      modules: ['recommendationTrend', 'financialData', 'upgradeDowngradeHistory'],
+    })
+
+    const fin = result?.financialData || {}
+    const trends = result?.recommendationTrend?.trend || []
+    const upgrades = result?.upgradeDowngradeHistory?.history || []
+
+    // Current month recommendation distribution
+    const current = trends.find(t => t.period === '0m') || trends[0] || {}
+
+    // Build trend over months (0m = this month, -1m, -2m, -3m)
+    const trendData = trends
+      .filter(t => t.period)
+      .map(t => ({
+        period: t.period,
+        strongBuy: t.strongBuy || 0,
+        buy: t.buy || 0,
+        hold: t.hold || 0,
+        sell: t.sell || 0,
+        strongSell: t.strongSell || 0,
+      }))
+
+    // Recent upgrades/downgrades (last 10)
+    const recentActions = upgrades.slice(0, 10).map(u => ({
+      firm: u.firm,
+      toGrade: u.toGrade,
+      fromGrade: u.fromGrade,
+      action: u.action,
+      date: u.epochGradeDate ? new Date(u.epochGradeDate * 1000).toISOString().split('T')[0] : null,
+    }))
+
+    const totalAnalysts = (current.strongBuy || 0) + (current.buy || 0) +
+      (current.hold || 0) + (current.sell || 0) + (current.strongSell || 0)
+
+    return {
+      recommendation: fin.recommendationKey || null,
+      recommendationMean: fin.recommendationMean || null,
+      numberOfAnalysts: fin.numberOfAnalystOpinions || totalAnalysts || null,
+      targetLow: fin.targetLowPrice || null,
+      targetMean: fin.targetMeanPrice || null,
+      targetMedian: fin.targetMedianPrice || null,
+      targetHigh: fin.targetHighPrice || null,
+      currentPrice: fin.currentPrice || null,
+      distribution: {
+        strongBuy: current.strongBuy || 0,
+        buy: current.buy || 0,
+        hold: current.hold || 0,
+        sell: current.sell || 0,
+        strongSell: current.strongSell || 0,
+      },
+      trend: trendData,
+      recentActions,
+    }
+  } catch (err) {
+    console.error(`Error fetching analyst data for ${symbol}:`, err.message)
+    return null
+  }
+}
+
 export async function getMarketIndices() {
   const symbols = ['^DJI', '^GSPC', '^IXIC', '^RUT', '^VIX', '^TNX']
   const names = {

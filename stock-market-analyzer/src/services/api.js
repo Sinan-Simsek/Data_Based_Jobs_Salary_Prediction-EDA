@@ -27,6 +27,7 @@ export const searchStocks = (q) => fetchJSON(`/stocks/search?q=${encodeURICompon
 export const getStockQuote = (symbol) => fetchJSON(`/stocks/${symbol}/quote`)
 export const getStockInfo = (symbol) => fetchJSON(`/stocks/${symbol}/info`)
 export const getStockHistory = (symbol, range = '1y') => fetchJSON(`/stocks/${symbol}/history?range=${range}`)
+export const getStockAnalysts = (symbol) => fetchJSON(`/stocks/${symbol}/analysts`)
 
 // Market
 export const getMarketIndices = () => fetchJSON('/market/indices')
