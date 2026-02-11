@@ -8,13 +8,15 @@ import {
   BarChart3,
   Star,
   Settings,
-  Activity
+  Activity,
+  Brain,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/search', icon: Search, label: 'Stock Search' },
   { to: '/markets', icon: TrendingUp, label: 'Markets' },
+  { to: '/predictions', icon: Brain, label: 'AI Predictions' },
   { to: '/portfolio', icon: Briefcase, label: 'Portfolio' },
   { to: '/watchlist', icon: Star, label: 'Watchlist' },
   { to: '/screener', icon: BarChart3, label: 'Screener' },

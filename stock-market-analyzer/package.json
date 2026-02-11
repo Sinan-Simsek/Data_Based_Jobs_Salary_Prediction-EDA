@@ -11,10 +11,13 @@
     "server": "node server/index.js",
     "migrate": "node server/migrate.js",
     "sync": "node server/sync.js",
-    "sync:quick": "node server/sync.js --quick"
+    "sync:quick": "node server/sync.js --quick",
+    "predict": "node server/predict.js",
+    "predict:top": "node server/predict.js --top 20"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
+    "@tensorflow/tfjs": "^4.22.0",
     "better-sqlite3": "^12.6.2",
     "cors": "^2.8.6",
     "date-fns": "^4.1.0",

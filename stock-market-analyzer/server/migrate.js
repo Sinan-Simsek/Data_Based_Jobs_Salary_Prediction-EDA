@@ -81,6 +81,22 @@ const TABLES = [
   )`,
 
   `CREATE INDEX IF NOT EXISTS idx_market_news_fetched ON market_news(fetched_at DESC)`,
+
+  `CREATE TABLE IF NOT EXISTS stock_predictions (
+    symbol TEXT NOT NULL,
+    period TEXT NOT NULL,
+    current_price REAL,
+    predicted_price REAL,
+    predicted_change REAL,
+    predicted_change_pct REAL,
+    confidence REAL,
+    signal TEXT,
+    model_loss REAL,
+    predicted_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (symbol, period)
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_predictions_signal ON stock_predictions(signal, predicted_change_pct DESC)`,
 ]
 
 try {
