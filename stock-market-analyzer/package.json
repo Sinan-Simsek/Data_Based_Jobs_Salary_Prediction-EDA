@@ -13,7 +13,7 @@
     "sync": "node server/sync.js",
     "sync:quick": "node server/sync.js --quick",
     "predict": "node server/predict.js",
-    "predict:top": "node server/predict.js --top 20"
+    "predict:top": "node server/predict.js --top 10"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
