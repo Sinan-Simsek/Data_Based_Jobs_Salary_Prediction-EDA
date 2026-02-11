@@ -45,3 +45,11 @@ export const removeFromWatchlist = (symbol) => deleteJSON(`/watchlist/${symbol}`
 export const getPortfolio = () => fetchJSON('/portfolio')
 export const addToPortfolio = (symbol, shares, avgPrice) => postJSON('/portfolio', { symbol, shares, avgPrice })
 export const removeFromPortfolio = (symbol) => deleteJSON(`/portfolio/${symbol}`)
+
+// Predictions
+export const getPredictions = (params = {}) => {
+  const qs = new URLSearchParams(params).toString()
+  return fetchJSON(`/predictions${qs ? '?' + qs : ''}`)
+}
+export const getPredictionsSummary = () => fetchJSON('/predictions/stats/summary')
+export const getPredictionSectors = () => fetchJSON('/predictions/filters/sectors')

@@ -5,6 +5,7 @@ import stocksRouter from './routes/stocks.js'
 import marketRouter from './routes/market.js'
 import portfolioRouter from './routes/portfolio.js'
 import watchlistRouter from './routes/watchlist.js'
+import predictionsRouter from './routes/predictions.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -27,6 +28,7 @@ app.use('/api/stocks', stocksRouter)
 app.use('/api/market', marketRouter)
 app.use('/api/portfolio', portfolioRouter)
 app.use('/api/watchlist', watchlistRouter)
+app.use('/api/predictions', predictionsRouter)
 
 // Health check + database stats
 app.get('/api/health', (req, res) => {
