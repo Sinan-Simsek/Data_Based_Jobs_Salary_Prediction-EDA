@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import db from '../db.js'
-import { getQuote, getHistoricalData, searchStocks, getStockProfile } from '../services/yahoo.js'
+import { getQuote, getHistoricalData, searchStocks, getStockProfile, getAnalystData } from '../services/yahoo.js'
 
 const router = Router()
 
@@ -121,6 +121,19 @@ router.get('/:symbol/history', async (req, res) => {
   } catch (err) {
     console.error('History error:', err)
     res.status(500).json({ error: 'Failed to fetch history' })
+  }
+})
+
+// Get analyst ratings and recommendations
+router.get('/:symbol/analysts', async (req, res) => {
+  try {
+    const symbol = req.params.symbol.toUpperCase()
+    const data = await getAnalystData(symbol)
+    if (!data) return res.status(404).json({ error: 'No analyst data found' })
+    res.json(data)
+  } catch (err) {
+    console.error('Analyst error:', err)
+    res.status(500).json({ error: 'Failed to fetch analyst data' })
   }
 })
 
