@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Star, TrendingUp, TrendingDown, X } from 'lucide-react'
 import * as api from '../services/api'
@@ -12,29 +12,35 @@ export default function Watchlist() {
   const [stocks, setStocks] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    async function fetchQuotes() {
-      if (watchlist.length === 0) {
-        setStocks([])
-        setLoading(false)
-        return
-      }
-      try {
-        setLoading(true)
-        const quotes = await Promise.all(
-          watchlist.map(symbol =>
-            api.getStockQuote(symbol).then(quote => ({ symbol, ...quote }))
-          )
+  const watchlistRef = useRef(watchlist)
+  watchlistRef.current = watchlist
+
+  const fetchQuotes = useCallback(async (showLoader) => {
+    const wl = watchlistRef.current
+    if (wl.length === 0) { setStocks([]); setLoading(false); return }
+    try {
+      if (showLoader) setLoading(true)
+      const quotes = await Promise.all(
+        wl.map(symbol =>
+          api.getStockQuote(symbol).then(quote => ({ symbol, ...quote }))
         )
-        setStocks(quotes)
-      } catch (err) {
-        console.error('Failed to load watchlist quotes:', err)
-      } finally {
-        setLoading(false)
-      }
+      )
+      setStocks(quotes)
+    } catch (err) {
+      console.error('Failed to load watchlist quotes:', err)
+    } finally {
+      setLoading(false)
     }
-    fetchQuotes()
-  }, [watchlist])
+  }, [])
+
+  // Initial load + re-fetch on watchlist change
+  useEffect(() => { fetchQuotes(true) }, [watchlist, fetchQuotes])
+
+  // 10s auto-refresh
+  useEffect(() => {
+    const interval = setInterval(() => fetchQuotes(false), 10_000)
+    return () => clearInterval(interval)
+  }, [fetchQuotes])
 
   if (loading) return <Loader text="Loading watchlist..." />
 

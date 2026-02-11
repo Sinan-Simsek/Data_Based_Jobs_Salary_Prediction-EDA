@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   TrendingUp,
@@ -29,21 +29,29 @@ export default function StockDetail() {
   const [shares, setShares] = useState('')
   const [price, setPrice] = useState('')
 
-  useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    Promise.all([api.getStockQuote(symbol), api.getStockInfo(symbol)])
-      .then(([quoteData, infoData]) => {
-        if (!cancelled) {
-          setQuote({ ...quoteData, ...infoData })
-          setLoading(false)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => { cancelled = true }
+  const fetchStockData = useCallback(async (showLoader) => {
+    try {
+      if (showLoader) setLoading(true)
+      const [quoteData, infoData] = await Promise.all([
+        api.getStockQuote(symbol),
+        api.getStockInfo(symbol),
+      ])
+      setQuote({ ...quoteData, ...infoData })
+    } catch (err) {
+      console.error('Failed to load stock data:', err)
+    } finally {
+      setLoading(false)
+    }
   }, [symbol])
+
+  // Initial load + re-fetch on symbol change
+  useEffect(() => { fetchStockData(true) }, [fetchStockData])
+
+  // 10s auto-refresh
+  useEffect(() => {
+    const interval = setInterval(() => fetchStockData(false), 10_000)
+    return () => clearInterval(interval)
+  }, [fetchStockData])
 
   if (loading || !quote) return <Loader />
 

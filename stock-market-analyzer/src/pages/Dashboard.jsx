@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   TrendingUp,
@@ -29,90 +29,85 @@ export default function Dashboard() {
   const [portfolioData, setPortfolioData] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  const watchlistRef = useRef(watchlist)
+  const portfolioRef = useRef(portfolio)
+  watchlistRef.current = watchlist
+  portfolioRef.current = portfolio
+
   // Load market data
-  useEffect(() => {
-    let cancelled = false
-    async function loadMarketData() {
-      try {
-        const [indicesData, moversData, sectorsData, newsData, treeData] = await Promise.all([
-          api.getMarketIndices(),
-          api.getMarketMovers(),
-          api.getSectorPerformance(),
-          api.getMarketNews(),
-          api.getTreeMap().catch(() => []),
-        ])
-        if (!cancelled) {
-          setIndices(indicesData)
-          setMovers(moversData)
-          setSectors(sectorsData)
-          setNews(newsData.slice(0, 5))
-          setTreeMapData(treeData)
-        }
-      } catch (err) {
-        console.error('Failed to load market data:', err)
-      }
+  const loadMarketData = useCallback(async () => {
+    try {
+      const [indicesData, moversData, sectorsData, newsData, treeData] = await Promise.all([
+        api.getMarketIndices(),
+        api.getMarketMovers(),
+        api.getSectorPerformance(),
+        api.getMarketNews(),
+        api.getTreeMap().catch(() => []),
+      ])
+      setIndices(indicesData)
+      setMovers(moversData)
+      setSectors(sectorsData)
+      setNews(newsData.slice(0, 5))
+      setTreeMapData(treeData)
+    } catch (err) {
+      console.error('Failed to load market data:', err)
     }
-    loadMarketData()
-    return () => { cancelled = true }
   }, [])
 
   // Load watchlist quotes
-  useEffect(() => {
-    let cancelled = false
-    async function loadWatchlistQuotes() {
-      if (watchlist.length === 0) {
-        setWatchlistQuotes({})
-        return
-      }
-      try {
-        const quotes = await Promise.all(
-          watchlist.slice(0, 6).map(symbol => api.getStockQuote(symbol))
-        )
-        if (!cancelled) {
-          const map = {}
-          watchlist.slice(0, 6).forEach((symbol, i) => {
-            map[symbol] = quotes[i]
-          })
-          setWatchlistQuotes(map)
-        }
-      } catch (err) {
-        console.error('Failed to load watchlist quotes:', err)
-      }
+  const loadWatchlistQuotes = useCallback(async () => {
+    const wl = watchlistRef.current
+    if (wl.length === 0) { setWatchlistQuotes({}); return }
+    try {
+      const quotes = await Promise.all(
+        wl.slice(0, 6).map(symbol => api.getStockQuote(symbol))
+      )
+      const map = {}
+      wl.slice(0, 6).forEach((symbol, i) => { map[symbol] = quotes[i] })
+      setWatchlistQuotes(map)
+    } catch (err) {
+      console.error('Failed to load watchlist quotes:', err)
     }
-    loadWatchlistQuotes()
-    return () => { cancelled = true }
-  }, [watchlist])
+  }, [])
 
   // Load portfolio quotes
-  useEffect(() => {
-    let cancelled = false
-    async function loadPortfolioData() {
-      if (portfolio.length === 0) {
-        setPortfolioData([])
-        return
-      }
-      try {
-        const quotes = await Promise.all(
-          portfolio.map(p => api.getStockQuote(p.symbol))
-        )
-        if (!cancelled) {
-          const data = portfolio.map((p, i) => {
-            const quote = quotes[i]
-            const currentValue = p.shares * quote.price
-            const costBasis = p.shares * p.avgPrice
-            const gain = currentValue - costBasis
-            const gainPercent = (gain / costBasis) * 100
-            return { ...p, quote, currentValue, costBasis, gain, gainPercent }
-          })
-          setPortfolioData(data)
-        }
-      } catch (err) {
-        console.error('Failed to load portfolio data:', err)
-      }
+  const loadPortfolioData = useCallback(async () => {
+    const pf = portfolioRef.current
+    if (pf.length === 0) { setPortfolioData([]); return }
+    try {
+      const quotes = await Promise.all(
+        pf.map(p => api.getStockQuote(p.symbol))
+      )
+      const data = pf.map((p, i) => {
+        const quote = quotes[i]
+        const currentValue = p.shares * quote.price
+        const costBasis = p.shares * p.avgPrice
+        const gain = currentValue - costBasis
+        const gainPercent = (gain / costBasis) * 100
+        return { ...p, quote, currentValue, costBasis, gain, gainPercent }
+      })
+      setPortfolioData(data)
+    } catch (err) {
+      console.error('Failed to load portfolio data:', err)
     }
+  }, [])
+
+  // Initial load + 10s auto-refresh
+  useEffect(() => {
+    loadMarketData()
+    loadWatchlistQuotes()
     loadPortfolioData()
-    return () => { cancelled = true }
-  }, [portfolio])
+    const interval = setInterval(() => {
+      loadMarketData()
+      loadWatchlistQuotes()
+      loadPortfolioData()
+    }, 10_000)
+    return () => clearInterval(interval)
+  }, [loadMarketData, loadWatchlistQuotes, loadPortfolioData])
+
+  // Re-fetch when watchlist/portfolio changes
+  useEffect(() => { loadWatchlistQuotes() }, [watchlist, loadWatchlistQuotes])
+  useEffect(() => { loadPortfolioData() }, [portfolio, loadPortfolioData])
 
   // Determine overall loading state
   useEffect(() => {

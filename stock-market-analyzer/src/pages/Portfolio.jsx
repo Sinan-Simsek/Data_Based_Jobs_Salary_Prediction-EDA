@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Briefcase,
@@ -30,34 +30,40 @@ export default function Portfolio() {
   const [holdings, setHoldings] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    async function fetchQuotes() {
-      if (portfolio.length === 0) {
-        setHoldings([])
-        setLoading(false)
-        return
-      }
-      try {
-        setLoading(true)
-        const results = await Promise.all(
-          portfolio.map(async (p) => {
-            const quote = await api.getStockQuote(p.symbol)
-            const currentValue = p.shares * quote.price
-            const costBasis = p.shares * p.avgPrice
-            const gain = currentValue - costBasis
-            const gainPercent = (gain / costBasis) * 100
-            return { ...p, quote, currentValue, costBasis, gain, gainPercent }
-          })
-        )
-        setHoldings(results)
-      } catch (err) {
-        console.error('Failed to load portfolio quotes:', err)
-      } finally {
-        setLoading(false)
-      }
+  const portfolioRef = useRef(portfolio)
+  portfolioRef.current = portfolio
+
+  const fetchQuotes = useCallback(async (showLoader) => {
+    const pf = portfolioRef.current
+    if (pf.length === 0) { setHoldings([]); setLoading(false); return }
+    try {
+      if (showLoader) setLoading(true)
+      const results = await Promise.all(
+        pf.map(async (p) => {
+          const quote = await api.getStockQuote(p.symbol)
+          const currentValue = p.shares * quote.price
+          const costBasis = p.shares * p.avgPrice
+          const gain = currentValue - costBasis
+          const gainPercent = (gain / costBasis) * 100
+          return { ...p, quote, currentValue, costBasis, gain, gainPercent }
+        })
+      )
+      setHoldings(results)
+    } catch (err) {
+      console.error('Failed to load portfolio quotes:', err)
+    } finally {
+      setLoading(false)
     }
-    fetchQuotes()
-  }, [portfolio])
+  }, [])
+
+  // Initial load + re-fetch on portfolio change
+  useEffect(() => { fetchQuotes(true) }, [portfolio, fetchQuotes])
+
+  // 10s auto-refresh
+  useEffect(() => {
+    const interval = setInterval(() => fetchQuotes(false), 10_000)
+    return () => clearInterval(interval)
+  }, [fetchQuotes])
 
   if (loading) return <Loader text="Loading portfolio..." />
 

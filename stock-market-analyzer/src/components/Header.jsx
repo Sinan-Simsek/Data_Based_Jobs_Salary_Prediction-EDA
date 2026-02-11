@@ -18,7 +18,7 @@ export default function Header() {
     api.getMarketIndices().then(setIndices).catch(() => {})
     const interval = setInterval(() => {
       api.getMarketIndices().then(setIndices).catch(() => {})
-    }, 60_000)
+    }, 10_000)
     return () => clearInterval(interval)
   }, [])
 

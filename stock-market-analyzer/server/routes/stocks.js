@@ -22,9 +22,9 @@ router.get('/:symbol/quote', async (req, res) => {
   try {
     const symbol = req.params.symbol.toUpperCase()
 
-    // Check cache (1 minute TTL)
+    // Check cache (10 second TTL)
     const cached = db.prepare(
-      `SELECT * FROM stock_quotes WHERE symbol = ? AND updated_at > datetime('now', '-1 minute')`
+      `SELECT * FROM stock_quotes WHERE symbol = ? AND updated_at > datetime('now', '-10 seconds')`
     ).get(symbol)
 
     if (cached) {
