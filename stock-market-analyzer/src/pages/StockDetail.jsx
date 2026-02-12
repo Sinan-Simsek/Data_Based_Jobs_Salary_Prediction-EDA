@@ -66,6 +66,7 @@ export default function StockDetail() {
   const { watchlist, addToWatchlist, removeFromWatchlist, addToPortfolio } = useApp()
   const [quote, setQuote] = useState(null)
   const [analysts, setAnalysts] = useState(null)
+  const [periodChange, setPeriodChange] = useState(null)
   const [loading, setLoading] = useState(true)
   const isWatched = watchlist.includes(symbol)
   const [showAddPortfolio, setShowAddPortfolio] = useState(false)
@@ -166,12 +167,24 @@ export default function StockDetail() {
       <div className="glass-card rounded-xl p-6">
         <div className="flex items-end gap-4 mb-6">
           <span className="text-4xl font-bold text-white">{formatCurrency(quote.price)}</span>
-          <div className={`flex items-center gap-1 text-lg font-semibold ${quote.changePercent >= 0 ? 'text-success' : 'text-danger'}`}>
-            {quote.changePercent >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-            {formatCurrency(Math.abs(quote.change))} ({formatPercent(quote.changePercent)})
-          </div>
+          {periodChange ? (
+            <div className="flex items-center gap-2">
+              <div className={`flex items-center gap-1 text-lg font-semibold ${periodChange.changePct >= 0 ? 'text-success' : 'text-danger'}`}>
+                {periodChange.changePct >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                {formatCurrency(Math.abs(periodChange.change))} ({periodChange.changePct >= 0 ? '+' : ''}{periodChange.changePct.toFixed(2)}%)
+              </div>
+              <span className="text-xs text-dark-400 bg-dark-800 px-2 py-0.5 rounded">
+                {periodChange.range.toUpperCase()}
+              </span>
+            </div>
+          ) : (
+            <div className={`flex items-center gap-1 text-lg font-semibold ${quote.changePercent >= 0 ? 'text-success' : 'text-danger'}`}>
+              {quote.changePercent >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+              {formatCurrency(Math.abs(quote.change))} ({formatPercent(quote.changePercent)})
+            </div>
+          )}
         </div>
-        <StockChart symbol={symbol} />
+        <StockChart symbol={symbol} onPeriodChange={setPeriodChange} />
       </div>
 
       {/* Add to Portfolio Form */}

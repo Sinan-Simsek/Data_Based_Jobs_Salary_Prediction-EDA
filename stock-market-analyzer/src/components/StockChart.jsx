@@ -45,7 +45,7 @@ function CustomTooltip({ active, payload }) {
   )
 }
 
-export default function StockChart({ symbol, compact = false }) {
+export default function StockChart({ symbol, compact = false, onPeriodChange }) {
   const [range, setRange] = useState('1y')
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
@@ -54,10 +54,23 @@ export default function StockChart({ symbol, compact = false }) {
     let cancelled = false
     setLoading(true)
     getStockHistory(symbol, range)
-      .then(d => { if (!cancelled) { setData(d); setLoading(false) } })
+      .then(d => {
+        if (!cancelled) {
+          setData(d)
+          setLoading(false)
+          // Report period change to parent
+          if (onPeriodChange && d.length >= 2) {
+            const firstClose = d[0].close
+            const lastClose = d[d.length - 1].close
+            const change = lastClose - firstClose
+            const changePct = (change / firstClose) * 100
+            onPeriodChange({ range, change, changePct, firstClose, lastClose })
+          }
+        }
+      })
       .catch(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [symbol, range])
+  }, [symbol, range, onPeriodChange])
 
   const isPositive = data.length >= 2 && data[data.length - 1].close >= data[0].close
   const color = isPositive ? '#10b981' : '#ef4444'
