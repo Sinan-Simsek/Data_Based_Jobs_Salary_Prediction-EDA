@@ -188,7 +188,7 @@ export default function Dashboard() {
               <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-600 inline-block"></span> Gaining</span>
             </div>
           </div>
-          <StockTreeMap data={treeMapData} height={550} />
+          <StockTreeMap data={treeMapData} height={typeof window !== 'undefined' && window.innerWidth < 768 ? 350 : 550} />
         </div>
       )}
 
@@ -280,7 +280,7 @@ export default function Dashboard() {
         {/* Sector Performance */}
         <div className="lg:col-span-2 glass-card rounded-xl p-5">
           <h2 className="text-lg font-semibold text-white mb-4">Sector Performance</h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {sectors.map(sector => (
               <div key={sector.name} className="flex items-center justify-between p-3 rounded-lg bg-dark-800/30">
                 <div>
