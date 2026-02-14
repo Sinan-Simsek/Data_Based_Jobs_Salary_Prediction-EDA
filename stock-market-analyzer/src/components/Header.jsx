@@ -57,7 +57,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-dark-900/80 backdrop-blur-xl border-b border-dark-700/50">
-      <div className="flex items-center justify-between h-14 px-6">
+      <div className="flex items-center justify-between h-14 px-3 md:px-6">
         {/* Market ticker */}
         <div className="hidden lg:flex items-center gap-6">
           {indices.slice(0, 4).map(idx => (
